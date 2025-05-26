@@ -307,11 +307,16 @@ st.markdown(
     <hr style="border: 0.5px solid #ccc;" />
     <div style='text-align: center; font-size: 16px; padding-top: 12px; color: #444;'>
         <strong> © 2025 Developed by Soham Jagtap| Data Analyst </strong> <br>
-        📧 <a href='mailto:sohamvjagtap9750@gmail.com' style='color: #0366d6;'>@SohamJagtap</a> |
         🔗 <a href='https://github.com/Soham2543' target='_blank' style='text-decoration: none; color: #0366d6;'>GitHub</a> |
         💼 <a href='https://www.linkedin.com/in/sohamvjagtap/' target='_blank' style='text-decoration: none; color: #0a66c2;'>LinkedIn</a>
     </div>
     """,
+    unsafe_allow_html=True
+)
+#st.markdown("---")
+st.markdown(
+    "<br><p style='text-align:center; font-size:16px;'>🚀 <strong>You're using Version 1.0</strong><br>"
+    " Please share your valuable feedback at <a href='mailto:sohamvjagtap9750@gmail.com'> <br>📧sohamvjagtap9750@gmail.com</a>.</p>",
     unsafe_allow_html=True
 )
 
