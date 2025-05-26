@@ -279,7 +279,7 @@ else:
     use_5cts_price = st.checkbox("Use 5 Cts Rap Price", value=False)
 
     def calculate_diamond_price(shape, weight, color, clarity, label, discount, use_5cts_price):
-        shape_code = "BR" if shape == "Round" else "F"
+        shape_code = "BR" if shape == "Round" else "PS"
         df = df_round if shape_code == "BR" else df_fancy
         rap_price_ct = get_rap_price(df, shape_code, clarity, color, weight, use_5cts_price)
 
