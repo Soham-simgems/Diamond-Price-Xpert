@@ -216,6 +216,9 @@ else:
     st.markdown("### 📥 Enter Diamond Details")
 
 
+        # ------------------------------
+    # Input Section for Both Diamonds
+    # ------------------------------
     col1, col2 = st.columns(2)
 
     with col1:
@@ -224,7 +227,6 @@ else:
         shape1 = st.selectbox("Shape", shape_display, key="s1")
         color1 = st.selectbox("Color", color_options, key="c1")
         clarity1 = st.selectbox("Clarity", clarity_options, key="cl1")
-        discount1 = st.number_input("Discount (%)", value=10.0, min_value=0.0, max_value=100.0, key="disc1")
 
     with col2:
         st.markdown("#### 📍 Diamond B")
@@ -232,76 +234,144 @@ else:
         shape2 = st.selectbox("Shape", shape_display, key="s2")
         color2 = st.selectbox("Color", color_options, key="c2")
         clarity2 = st.selectbox("Clarity", clarity_options, key="cl2")
-        discount2 = st.number_input("Discount (%)", value=10.0, min_value=0.0, max_value=100.0, key="disc2")
 
-    shape_code1 = shape_mapping[shape1]
-    shape_code2 = shape_mapping[shape2]
+    # ------------------------------
+    # Discount Selection for Both Diamonds
+    # ------------------------------
+    st.markdown("### 💲 Discount Selection")
 
-    df1 = df_round if shape_code1 == "BR" else df_fancy
-    df2 = df_round if shape_code2 == "BR" else df_fancy
+    if "discount_mode_A" not in st.session_state:
+        st.session_state.discount_mode_A = "-"
+    if "discount_mode_B" not in st.session_state:
+        st.session_state.discount_mode_B = "-"
 
-    use_5cts_price = st.checkbox("Use 5 Cts Rap Price (Recut Mode)")
+    # Diamond A Discount Inputs
+    with st.expander("🔻 Diamond A Discount"):
+        d1col1, d1col2, d1val = st.columns([1, 1, 2])
+        with d1col1:
+            if st.button("➕ A", key="plus_a"):
+                st.session_state.discount_mode_A = "-"
+        with d1col2:
+            if st.button("➖ A", key="minus_a"):
+                st.session_state.discount_mode_A = "+"
+        with d1val:
+            disc_val_a = st.number_input("Discount A (%)", min_value=0.0, max_value=100.0, value=10.0, key="dval_a")
 
-    rap_price1 = get_rap_price(df1, shape_code1, clarity1, color1, weight1, use_5cts_price)
-    rap_price2 = get_rap_price(df2, shape_code2, clarity2, color2, weight2, use_5cts_price)
+    # Diamond B Discount Inputs
+    with st.expander("🔻 Diamond B Discount"):
+        d2col1, d2col2, d2val = st.columns([1, 1, 2])
+        with d2col1:
+            if st.button("➕ B", key="plus_b"):
+                st.session_state.discount_mode_B = "-"
+        with d2col2:
+            if st.button("➖ B", key="minus_b"):
+                st.session_state.discount_mode_B = "+"
+        with d2val:
+            disc_val_b = st.number_input("Discount B (%)", min_value=0.0, max_value=100.0, value=10.0, key="dval_b")
 
-    if rap_price1 is None or rap_price2 is None:
-        st.error("❌ Could not find Rapaport price for one or both stones.")
-    else:
-        # Calculate discounted prices
-        price_per_ct_1 = rap_price1 * (1 - discount1 / 100)
-        total_usd_1 = price_per_ct_1 * weight1
+    # Process discount values
+    discount_a = -abs(disc_val_a) if st.session_state.discount_mode_A == "-" else abs(disc_val_a)
+    discount_b = -abs(disc_val_b) if st.session_state.discount_mode_B == "-" else abs(disc_val_b)
 
-        price_per_ct_2 = rap_price2 * (1 - discount2 / 100)
-        total_usd_2 = price_per_ct_2 * weight2
+    # ------------------------------
+    # Function to Calculate and Display Pricing
+    # ------------------------------
+    use_5cts_price = st.checkbox("Use 5 Cts Rap Price", value=False)
 
-        # Get conversion rate
+    def calculate_diamond_price(shape, weight, color, clarity, label, discount, use_5cts_price):
+        shape_code = "BR" if shape == "Round" else "F"
+        df = df_round if shape_code == "BR" else df_fancy
+        rap_price_ct = get_rap_price(df, shape_code, clarity, color, weight, use_5cts_price)
+
+        if rap_price_ct is None:
+            st.error(f"❌ No Rapaport price found for {label}.")
+            return None, None, None, None
+
+        price_per_ct = rap_price_ct * (1 - discount / 100)
+        total_usd = price_per_ct * weight
+
         inr_rate = get_usd_to_inr_rate()
+        total_inr = total_usd * inr_rate
 
-        total_inr_1 = total_usd_1 * inr_rate
-        total_inr_2 = total_usd_2 * inr_rate
+        colx, coly = st.columns(2)
+        with colx:
+            price_per_ct_input = st.number_input(f"{label} - Price per Ct (USD)", value=round(price_per_ct, 2))
+        with coly:
+            total_usd_input = st.number_input(f"{label} - Total Price (USD)", value=round(total_usd, 2))
 
-        # Display stones pricing side by side
-        st.markdown("### 💰 Price Breakdown")
+        # Adjust discount if user edits price fields
+        if price_per_ct_input != round(price_per_ct, 2):
+            discount = (1 - (price_per_ct_input / rap_price_ct)) * 100
+            total_usd_input = price_per_ct_input * weight
+        elif total_usd_input != round(total_usd, 2):
+            price_per_ct_input = total_usd_input / weight if weight != 0 else 0
+            discount = (1 - (price_per_ct_input / rap_price_ct)) * 100
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown(f"#### Diamond A")
-            st.write(f"✅ Rapaport Price/Ct: ${rap_price1:.2f}")
-            st.write(f"💸 Discount: {discount1:.2f}%")
-            st.write(f"💰 Price per Ct (USD): ${price_per_ct_1:.2f}")
-            st.write(f"💵 Total Price (USD): ${total_usd_1:.2f}")
-            st.write(f"💷 Total Price (INR): ₹{total_inr_1:,.2f}")
+        total_inr = total_usd_input * inr_rate
 
-        with col2:
-            st.markdown(f"#### Diamond B")
-            st.write(f"✅ Rapaport Price/Ct: ${rap_price2:.2f}")
-            st.write(f"💸 Discount: {discount2:.2f}%")
-            st.write(f"💰 Price per Ct (USD): ${price_per_ct_2:.2f}")
-            st.write(f"💵 Total Price (USD): ${total_usd_2:.2f}")
-            st.write(f"💷 Total Price (INR): ₹{total_inr_2:,.2f}")
+        st.markdown(f"### 💎 {label} Price Summary")
+        st.markdown(f"""
+        <div style="text-align:center; padding:15px; background-color:#f0f8ff; border-radius:10px; font-size:16px;">
+        <b>✅ Rapaport Price/Ct:</b> ${rap_price_ct:.2f}<br>
+        <b>💸 Discount:</b> {-discount:.2f}%<br>
+        <b>💰 Price per Ct (USD):</b> ${price_per_ct_input:.2f}<br>
+        <b>💵 Total Price (USD):</b> ${total_usd_input:.2f}<br>
+        <b>🌍 USD to INR Rate:</b> ₹{inr_rate:.2f}<br>
+        <b>💷 Total Price (INR):</b> ₹{total_inr:,.2f}
+        </div>
+        """, unsafe_allow_html=True)
 
-        # Final summary calculations
-        # 📌 DIFF: Absolute Difference in Total Amount
-        diff_usd = total_usd_2 - total_usd_1
+        # Return updated discount and key price values for further summary
+        return total_usd_input, weight, rap_price_ct, discount
 
-        # 📌 COST: Margin of Stone 1 relative to Stone 2's weight and rap price
-        cost_usd = ((total_usd_1 / weight2) / rap_price2 - 1) * 100 if weight2 != 0 and rap_price2 != 0 else 0
 
-        # 📌 U/D: Up or Down Percentage (relative to Stone 1)
-        up_down_percent = ((total_usd_2 - total_usd_1) / total_usd_1) * 100 if total_usd_1 != 0 else 0
-        st.markdown("---")
-        st.markdown(
-    """
-    <div style='text-align: center;'>
-        <h3>📊 Final Cost Summary</h3>
-        <p><strong>Difference in Total Price (USD):</strong> ${:.2f}</p>
-        <p><strong>Cost %:</strong> {:.2f}</p>
-        <p><strong>Up/Down %:</strong> {:.2f}%</p>
-    </div>
-    """.format(diff_usd, cost_usd, up_down_percent),
-    unsafe_allow_html=True
-)
+    # ------------------------------
+    # Run Price Calculations
+    # ------------------------------
+    st.markdown("---")
+
+    total_usd_1, weight1, rap_price1, discount_a = calculate_diamond_price(
+    shape1, weight1, color1, clarity1, "Diamond A", discount_a, use_5cts_price)
+    total_usd_2, weight2, rap_price2, discount_b = calculate_diamond_price(
+    shape2, weight2, color2, clarity2, "Diamond B", discount_b, use_5cts_price)
+   # ------------------------------
+    # Show Latest Rapaport Update
+    # ------------------------------
+    latest_date_round = df_round["Date"].dropna().max()
+    latest_date_fancy = df_fancy["Date"].dropna().max()
+    latest_date = max(latest_date_round, latest_date_fancy)
+
+    if pd.notna(latest_date):
+        last_updated_str = latest_date.strftime("%d %B %Y")
+        st.markdown(f"""
+        <div style='text-align: center; margin-top: 20px;'>
+            ✅ <span style="font-size:16px;">Last Updated Rapaport data: <b>{last_updated_str}</b></span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    diff_usd = total_usd_2 - total_usd_1
+
+    cost_usd = 0
+    if weight2 != 0 and rap_price2 != 0:
+        cost_usd = ((total_usd_1 / weight2) / rap_price2 - 1) * 100
+
+    up_down_percent = 0
+    if total_usd_1 != 0:
+        up_down_percent = ((total_usd_2 - total_usd_1) / total_usd_1) * 100
+
+    st.markdown("---")
+    st.markdown(
+        f"""
+        <div style='text-align: center;'>
+            <h3>📊 Final Cost Summary</h3>
+            <p><strong>Difference in Total Price (USD):</strong> ${diff_usd:.2f}</p>
+            <p><strong>Cost %:</strong> {cost_usd:.2f}%</p>
+            <p><strong>Up/Down %:</strong> {up_down_percent:.2f}%</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+# ------------------------------
 st.markdown(
     """
     <hr style="border: 0.5px solid #ccc;" />
@@ -316,7 +386,7 @@ st.markdown(
 #st.markdown("---")
 st.markdown(
     "<br><p style='text-align:center; font-size:16px;'>🚀 <strong>You're using Version 1.0</strong><br>"
-    " Please share your valuable feedback at <a href='mailto:sohamvjagtap9750@gmail.com'> <br>📧sohamvjagtap9750@gmail.com</a>.</p>",
+    " Please share your valuable feedback at <a href='mailto:sohamvjagtap9750@gmail.com'> <br>📧SohamJagtap</a></p>",
     unsafe_allow_html=True
 )
 
