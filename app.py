@@ -386,7 +386,7 @@ st.markdown(
 #st.markdown("---")
 st.markdown(
     "<br><p style='text-align:center; font-size:16px;'>🚀 <strong>You're using Version 1.0</strong><br>"
-    " Please share your valuable feedback at <a href='mailto:sohamvjagtap9750@gmail.com'> <br>📧SohamJagtap</a></p>",
+    " Please share your valuable feedback at <a href='mailto:soham.jagtap@simgems.com'> <br>📧SohamJagtap</a></p>",
     unsafe_allow_html=True
 )
 
