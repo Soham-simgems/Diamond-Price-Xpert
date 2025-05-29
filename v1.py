@@ -1,13 +1,10 @@
 import streamlit as st
 import pandas as pd
-#from forex_python.converter import CurrencyRates
-import requests
-
+import os
 
 # ------------------------------
 # UI Configuration
 # ------------------------------
-
 st.set_page_config(page_title="SIM GEMS DiamondPriceXpert", layout="centered")
 st.markdown("""
 <div style='text-align: center;'>
@@ -16,14 +13,13 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-
 # ------------------------------
 # Load Rapaport Data
 # ------------------------------
 @st.cache_data
 def load_data():
-    df_round = pd.read_csv("CSV2_ROUND_8_4 (4).csv", header=None)
-    df_fancy = pd.read_csv("CSV2_PEAR_8_4 (3).csv", header=None)
+    df_round = pd.read_csv("CSV2_ROUND_8_4.csv", header=None)
+    df_fancy = pd.read_csv("CSV2_PEAR_8_4.csv", header=None)
 
     df_round.columns = ["Shape", "Clarity", "Color", "From_Wt", "To_Wt", "Rap_Price_Ct", "Date"]
     df_fancy.columns = ["Shape", "Clarity", "Color", "From_Wt", "To_Wt", "Rap_Price_Ct", "Date"]
@@ -39,28 +35,89 @@ df_round, df_fancy = load_data()
 # Mappings
 # ------------------------------
 shape_display = [
-    "Round", "Princess", "Emerald", "Asscher", "Marquise",
-    "Oval", "Radiant", "Pear", "Heart", "Cushion"
+    "Round", "Pear", "Emerald", "Radiant", "Oval",
+    "Cush Brill", "Princess", "Heart", "Marquise", "Asscher", "Kite"
 ]
 shape_mapping = {shape: ("BR" if shape == "Round" else "PS") for shape in shape_display}
 color_options = list("DEFGHIJKLM")
 clarity_options = ["FL", "IF", "VVS1", "VVS2", "VS1", "VS2", "SI1", "SI2", "SI3", "I1", "I2", "I3"]
 
 # ------------------------------
-# Form UI
+# Shape Selection UI
 # ------------------------------
-st.markdown("### 📥 Enter Diamond Details")
-col1, col2 = st.columns(2)
-with col1:
-    weight = st.number_input("Stone Weight (Cts)", min_value=0.01, value=0.30, step=0.01, format="%.2f")
-    shape_ui = st.selectbox("Shape", shape_display)
-with col2:
-    color = st.selectbox("Color", color_options)
-    clarity = st.selectbox("Clarity", clarity_options)
+st.markdown("### 💠 Select Shape")
 
-# Shape mapping and weight logic
-shape_code = shape_mapping[shape_ui]
-clarity_lookup = "IF" if clarity == "FL" else clarity
+image_dir = "shapes/"
+selected_shape = st.session_state.get("selected_shape", None)
+shape_container = st.container()
+
+# CSS styling for smaller layout
+st.markdown("""
+<style>
+.shape-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    justify-items: center;
+    padding: 0 20px;
+}
+.shape-button {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 3px;
+    text-align: center;
+    background-color: #fff;
+    width: 90px;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    font-size: 12px;
+}
+.shape-button:hover {
+    background-color: #e0f7fa;
+}
+.shape-img {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+}
+</style>
+""", unsafe_allow_html=True)
+
+with shape_container:
+    st.markdown('<div class="shape-grid">', unsafe_allow_html=True)
+    for shape in shape_display:
+        image_file = f"{shape.lower().replace(' ', '_')}.png"
+        image_path = os.path.join(image_dir, image_file)
+
+        if os.path.exists(image_path):
+            import base64
+            with open(image_path, "rb") as img_file:
+                encoded = base64.b64encode(img_file.read()).decode()
+
+            button_html = f"""
+            <form action="" method="get">
+                <button name="shape_select" value="{shape}" class="shape-button" type="submit">
+                    <img src="data:image/png;base64,{encoded}" class="shape-img"><br>
+                    {shape}
+                </button>
+            </form>
+            """
+            st.markdown(button_html, unsafe_allow_html=True)
+        else:
+            st.warning(f"Image for {shape} not found.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ✅ Use modern st.query_params instead of deprecated API
+params = st.query_params
+if "shape_select" in params:
+    st.session_state["selected_shape"] = params["shape_select"]
+
+if st.session_state.get("selected_shape"):
+    selected_shape = st.session_state["selected_shape"]
+    st.success(f"✅ Selected Shape: {selected_shape}")
+
+    shape_ui = selected_shape
+    shape_code = shape_mapping.get(shape_ui, None)
 
 use_5cts_price = st.checkbox("Use 5 Cts Rap Price")
 
